@@ -6,14 +6,21 @@ Ambilight-like experience for lighting up wall behind your monitor based on scre
 In order to set up Edgelight, you'll need:
 1) Arduino-compatible board connected to USB in serial mode. I used Arduino Nano-compatible Chinese board with CH340/ATmega328P.
 It is very limited in resources but still enough to drive LED strip with a good quality.
-2) LED-strip consisting of WS2812B or similar LEDs connected to Arduino board and powered by a separate PSU adapter.
-Adapter is not really necessary but strongly recommended if you want to drive more than 10-20 LEDs with high maximum brightness.
-I used 30W PSU for 112 WS2812B LEDs, it works great.
+For my setup I bought this one: https://www.aliexpress.com/item/Nano-CH340-ATmega328P-MicroUSB-Compatible-for-Arduino-Nano-V3/32572612009.html
+
+2) LED-strip consisting of WS2812B or similar LEDs connected to Arduino board.
+Strip I used: https://www.aliexpress.com/item/DC5V-1m-4m-5m-WS2812B-Smart-led-pixel-strip-Black-White-PCB-30-60-144-leds/32337440906.html. I bought 4m 60 IP65 and used only 2 meters of it, you can just buy 2 meters and solder them together. You can choose 30 LEDs/m strip and it will work fine as well, only the max brightness will be lower.
+
+3) LED-strip should better be powered by a separate PSU adapter. It is not completely necessary but it's strongly recommended if you want to drive more than 10-20 LEDs with good brightness. Just for testing you can set very low brightness and skip on the PSU. In general 14 W/meter is recommended for a 60 LEDs/m strip. It makes 28 W of recommended power for my setup.
+PSU I used: https://www.aliexpress.com/item/LED-power-supply-adapter-AC100-240V-to-DC-5V-12V-24V-to-1A-2A-3A-4A/32842360990.html (5V 6A version)
+
 3) Windows (preferred) or Mac OS.
 4) Arduino IDE, Java.
 
+Total hardware cost was about $35 but only 2 meters of 4m LED strip were used. If you're really into saving you can get a similar setup for $20.
+
 Instructions:
-1) Set up your hardware. Attach LED strip to the back of your monitor. I used following layout for LEDs:
+1) Connect your hardware. Attach LED strip to the back of your monitor. I used following layout for LEDs:
 	
 ```
  || 35.34...  ...4.3.2.1 <= first LED connected to data output of the microcontroller
