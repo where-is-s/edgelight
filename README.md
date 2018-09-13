@@ -3,6 +3,24 @@ Ambilight-like experience for lighting up wall behind your monitor based on scre
 
 [![](https://img.youtube.com/vi/4WdhOpwml-g/0.jpg)](https://www.youtube.com/watch?v=4WdhOpwml-g "Click to play on YouTube")
 
+## Solution
+
+My solution works on software level. Screen is captured by a small Java app which hides in a tray and runs in background. LED color & brightness configuration is calculated based on screen data. When calculated, it is sent through USB cable to the microcontroller. Microcontroller sends data directly to LED strip.
+Pros, compared to other DYI solutions out there:
++ Very easy to make as home project
++ Very low cost (see below)
++ Not limited to a certian output format. HDMI, DP, VGA, doesn't matter since data is passed 
+
+Cons:
+- Works only with a PC
+- Puts some strain on CPU (see below)
+- LED response time is acceptable but not great
+
+Response time by the way is limited by screen capture API. On Windows the API limits requests to monitor refresh rate, so if you have 60Hz monitor, you'll have around 60 fps. Moreover, this rate must be divided by 4 because optimizations I made capture one screen border at a time. Currently the solution gives around 15 full content refreshes per second on a 60Hz monitor. This can seem low but LED states are interpolated between data refreshes so it actually looks smooth and not too laggy. LEDs are updated at about 100Hz so transitions are very smooth.
+It would be good to improve screenshot rate but I didn't find a way to do that. If you have an idea, please let me know.
+
+## What do I need to do the same?
+
 In order to set up Edgelight, you'll need:
 1) Arduino-compatible board connected to USB in serial mode. I used Arduino Nano-compatible Chinese board with CH340/ATmega328P.
 It is very limited in resources but still enough to drive LED strip with a good quality.
@@ -18,6 +36,8 @@ PSU I used: https://www.aliexpress.com/item/LED-power-supply-adapter-AC100-240V-
 4) Arduino IDE, Java.
 
 Total hardware cost was about $35 but only 2 meters of 4m LED strip were used. If you're really into saving you can get a similar setup for $20.
+
+## I got everything, how do I make it work?
 
 Instructions:
 1) Connect your hardware. Attach LED strip to the back of your monitor. I used following layout for LEDs:
