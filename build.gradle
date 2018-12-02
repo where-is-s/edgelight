@@ -32,8 +32,8 @@ dependencies {
 	implementation 'net.java.dev.jna:jna-platform:4.5.1'
 	implementation 'de.pitkley.jmccs:jmccs:0.2.0'
 	implementation 'com.github.tulskiy:jkeymaster:1.2'
-	implementation 'com.neuronrobotics:nrjavaserial:3.12.1'
 	implementation 'org.slf4j:slf4j-simple:1.7.25'
+	implementation 'org.scream3r:jssc:2.8.0'
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'

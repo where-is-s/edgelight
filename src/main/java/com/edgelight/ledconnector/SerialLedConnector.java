@@ -11,8 +11,11 @@ import org.slf4j.LoggerFactory;
 
 import com.edgelight.Configuration;
 import com.edgelight.common.RGB;
+import com.google.common.collect.Lists;
 
-import gnu.io.NRSerialPort;
+import jssc.SerialPort;
+import jssc.SerialPortException;
+import jssc.SerialPortList;
 
 public class SerialLedConnector extends Thread implements LedConnector {
 
@@ -24,13 +27,17 @@ public class SerialLedConnector extends Thread implements LedConnector {
 	private static final int BAUD_RATE = 921600;
 	private static final int BLOCK_SIZE = 112;
 	
-//	private DataInputStream inStream;
-	private DataOutputStream outStream;
+	private SerialPort serialPort;
 
 	private final List<RGB> rgbs = new ArrayList<>();
 	private final List<RGB> smoothRgbs = new ArrayList<>();
 
 	public SerialLedConnector() {
+		for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
+			this.rgbs.add(new RGB(0, 0, 0));
+			this.smoothRgbs.add(new RGB(0, 0, 0));
+		}
+		
 		start();
 	}
 	
@@ -44,10 +51,12 @@ public class SerialLedConnector extends Thread implements LedConnector {
 	public void run() {
 		try {
 			while (true) {
+				while (serialPort == null) {
+					Thread.sleep(1000);
+					connect();
+				}
+				
 				try {
-					if (outStream == null) {
-						connect();
-					}
 					synchronized (this.rgbs) {
 						for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
 							smoothRgbs.get(i).smoothenTo(this.rgbs.get(i), 0.18);
@@ -64,18 +73,23 @@ public class SerialLedConnector extends Thread implements LedConnector {
 						}
 						dos.close();
 						baos.write(END_MAGIC_BYTE);
-						outStream.write(baos.toByteArray());
+						if (!serialPort.writeBytes(baos.toByteArray())) {
+							serialPort = null;
+							try {
+								Thread.sleep(1000);
+							} catch (InterruptedException e1) {
+							}
+							continue;
+						}
 						long timePassed = System.currentTimeMillis() - start;
 						if (timePassed < UPDATES_INTERVAL) {
 							Thread.sleep(UPDATES_INTERVAL - timePassed);
 						}
 					}
+				} catch (SerialPortException e) {
+					// ignored
 				} catch (IOException e) {
-					try {
-						Thread.sleep(1000);
-						connect();
-					} catch (InterruptedException e1) {
-					}
+					// ignored
 				}
 			}
 		} catch (InterruptedException e) {
@@ -83,41 +97,35 @@ public class SerialLedConnector extends Thread implements LedConnector {
 	}
 	
 	private void connect() {
+		String[] portNames = SerialPortList.getPortNames();
+		
+		if (portNames.length == 0) {
+			logger.info("No COM-ports available! Waiting...");
+			return;
+		}
+		
 		String port = Configuration.PREFERRED_PORT;
 		if (port == null) {
-			port = NRSerialPort.getAvailableSerialPorts().iterator().next();
+			port = portNames[0];
 		}
-		logger.info("Selected port: " + port);
 		
-		NRSerialPort serial = new NRSerialPort(port, BAUD_RATE);
-		serial.connect();
-		
-		for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
-			this.rgbs.add(new RGB(0, 0, 0));
-			this.smoothRgbs.add(new RGB(0, 0, 0));
+		if (!Lists.newArrayList(portNames).contains(port)) {
+			logger.info("Port " + port + " is not available! Waiting...");
+			return;
 		}
-	
-//		inStream = new DataInputStream(serial.getInputStream());
-		outStream = new DataOutputStream(serial.getOutputStream());
 		
-//		new Thread() {
-//			public void run() {
-//				try {
-//					while (true) {
-//						StringBuilder sb = new StringBuilder();
-//						int c;
-//						while ((c = inStream.read()) != 'Z') {
-//							if (c != -1 && c != 0) {
-//								sb.append((char) c);
-//							}
-//						}
-//						logger.info("> " + sb);
-//					}
-//				} catch (Exception e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}.start();
+		try {
+			serialPort = new SerialPort(port);
+			serialPort.openPort();
+			serialPort.setParams(BAUD_RATE,
+	                SerialPort.DATABITS_8,
+	                SerialPort.STOPBITS_1,
+	                SerialPort.PARITY_NONE);
+			logger.info("Initialized port: " + port);
+		} catch (SerialPortException e) {
+			e.printStackTrace();
+			serialPort = null;
+		}
 	}
 	
 	@Override
