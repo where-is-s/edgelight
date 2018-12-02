@@ -127,38 +127,46 @@ public class LedManager {
 			RGB led = leds.get(i);
 
 			Color.RGBtoHSB((int) led.r, (int) led.g, (int) led.b, hsb);
-			hsb[1] = (float) Math.sqrt(hsb[1]);
-			hsb[2] = (float) Math.sqrt(hsb[2]);
-			Color c = new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
-			led.r = c.getRed();
-			led.g = c.getGreen();
-			led.b = c.getBlue();
-
-			if (i <= HORZ_LEDS) {
-				led.multiply(BRIGHTNESS_CORRECTION_TOP);
-			} else if (i > HORZ_LEDS && i <= VERT_LEDS) {
-				led.multiply(BRIGHTNESS_CORRECTION_LEFT);
-			} else if (i > HORZ_LEDS + VERT_LEDS && i < HORZ_LEDS + VERT_LEDS + HORZ_LEDS) {
-				led.multiply(BRIGHTNESS_CORRECTION_BOTTOM);
-			} else {
-				led.multiply(BRIGHTNESS_CORRECTION_RIGHT);
+			hsb[1] = (float) Math.pow(hsb[1], 3 - Math.min(hsb[2], 0.5) * 5.0); // saturation
+			//hsb[1] = (float) Math.sqrt(hsb[1]);
+			if (hsb[2] < 0.25) {
+				hsb[2] = hsb[2]*hsb[2]*hsb[2]/(0.25f*0.25f);
 			}
-			// colors correction
-			led.r *= COLOR_CORRECTION_RED;
-			led.g *= COLOR_CORRECTION_GREEN;
-			led.b *= COLOR_CORRECTION_BLUE;
-
+			float curb = hsb[2];
+			if (i <= HORZ_LEDS) {
+				curb *= BRIGHTNESS_CORRECTION_TOP;
+			} else if (i > HORZ_LEDS && i <= VERT_LEDS) {
+				curb *= BRIGHTNESS_CORRECTION_LEFT;
+			} else if (i > HORZ_LEDS + VERT_LEDS && i < HORZ_LEDS + VERT_LEDS + HORZ_LEDS) {
+				curb *= BRIGHTNESS_CORRECTION_BOTTOM;
+			} else {
+				curb *= BRIGHTNESS_CORRECTION_RIGHT;
+			}
+			
 			// monitor brightness = MONITOR_LOW_BRIGHTNESS gives led brightness = 0
 			// monitor brightness = MONITOR_HIGH_BRIGHTNESS and higher don't change led
 			// brightness
 			// linear proportion between
 			if (brightness <= MONITOR_LOW_BRIGHTNESS) {
-				led.multiply(0);
+				curb = 0;
 			} else if (brightness >= MONITOR_HIGH_BRIGHTNESS) {
-//				led.multiply(1);
+//				curb *= 1;
 			} else {
-				led.multiply((brightness - MONITOR_LOW_BRIGHTNESS) / MONITOR_HIGH_BRIGHTNESS);
+				curb *= (brightness - MONITOR_LOW_BRIGHTNESS) / MONITOR_HIGH_BRIGHTNESS;
 			}
+			
+			hsb[2] = Math.min(curb, 1.0f);
+			
+			Color c = new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
+			led.r = c.getRed();
+			led.g = c.getGreen();
+			led.b = c.getBlue();
+
+			// color correction
+			led.r *= COLOR_CORRECTION_RED;
+			led.g *= COLOR_CORRECTION_GREEN;
+			led.b *= COLOR_CORRECTION_BLUE;
+
 			led.checkBounds();
 		}
 		return leds;
