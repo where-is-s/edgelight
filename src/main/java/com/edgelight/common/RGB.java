@@ -47,6 +47,12 @@ public class RGB {
 		forEachColor(color -> Math.max(0, Math.min(255, color)));
 	}
 	
+	public void smoothenTo(RGB target, double speed) {
+		r = r * (1 - speed) + target.r * speed;
+		g = g * (1 - speed) + target.g * speed;
+		b = b * (1 - speed) + target.b * speed;
+	}
+	
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == null || !(obj instanceof RGB)) {

@@ -20,23 +20,24 @@ public class SerialLedConnector extends Thread implements LedConnector {
 
 	private static final int START_MAGIC_BYTE = 27;
 	private static final int END_MAGIC_BYTE = 91;
-	private static final int UPDATES_INTERVAL = 9; // 8ms is faster, 9ms is more reliable
-	private static final int BLOCK_SIZE = 16;
+	private static final int UPDATES_INTERVAL = 7; // 9ms for 115200, 5ms for 921600 baud rate
+	private static final int BAUD_RATE = 921600;
+	private static final int BLOCK_SIZE = 112;
 	
 //	private DataInputStream inStream;
 	private DataOutputStream outStream;
 
 	private final List<RGB> rgbs = new ArrayList<>();
+	private final List<RGB> smoothRgbs = new ArrayList<>();
 
 	public SerialLedConnector() {
 		start();
 	}
 	
 	private void write(RGB rgb, DataOutputStream os) throws IOException {
-		int b = (((int) rgb.r) >> 3) << 11;
-		b |= (((int) rgb.g) >> 2) << 5;
-		b |= (((int) rgb.b) >> 3);
-		os.writeShort(b);
+		os.writeByte((int) rgb.r);
+		os.writeByte((int) rgb.g);
+		os.writeByte((int) rgb.b);
 	}
 	
 	@Override
@@ -47,16 +48,19 @@ public class SerialLedConnector extends Thread implements LedConnector {
 					if (outStream == null) {
 						connect();
 					}
+					synchronized (this.rgbs) {
+						for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
+							smoothRgbs.get(i).smoothenTo(this.rgbs.get(i), 0.18);
+						}
+					}
 					for (int i = 0; i < Configuration.LEDS_COUNT;) {
 						long start = System.currentTimeMillis();
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						baos.write(START_MAGIC_BYTE);
 						baos.write(i);
 						DataOutputStream dos = new DataOutputStream(baos);
-						synchronized (this.rgbs) {
-							for (int j = 0; j < BLOCK_SIZE; ++j, ++i) {
-								write(this.rgbs.get(i), dos);
-							}
+						for (int j = 0; j < BLOCK_SIZE; ++j, ++i) {
+							write(this.smoothRgbs.get(i), dos);
 						}
 						dos.close();
 						baos.write(END_MAGIC_BYTE);
@@ -85,12 +89,12 @@ public class SerialLedConnector extends Thread implements LedConnector {
 		}
 		logger.info("Selected port: " + port);
 		
-		int baudRate = 115200;
-		NRSerialPort serial = new NRSerialPort(port, baudRate);
+		NRSerialPort serial = new NRSerialPort(port, BAUD_RATE);
 		serial.connect();
 		
 		for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
 			this.rgbs.add(new RGB(0, 0, 0));
+			this.smoothRgbs.add(new RGB(0, 0, 0));
 		}
 	
 //		inStream = new DataInputStream(serial.getInputStream());
