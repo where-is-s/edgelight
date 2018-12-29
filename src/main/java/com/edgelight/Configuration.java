@@ -25,7 +25,7 @@ public class Configuration {
 	public static final double CHANGE_SPEED = 1; // (0..1], defines the speed of color & brightness change on Java side
 	
 	public static final double MONITOR_LOW_BRIGHTNESS = 0; // when monitor brightness is below this value, Edgelight turns off
-	public static final double MONITOR_HIGH_BRIGHTNESS = 55; // when monitor brightness is above this value, Edgelight uses max brightness
+	public static final double MONITOR_HIGH_BRIGHTNESS = 52.5; // when monitor brightness is above this value, Edgelight uses max brightness
 	
 	// Use your own values here. Top side is most visible so it's brightness is reduced, bottom side is least visible so it is toned up
 	public static final double BRIGHTNESS_CORRECTION_TOP = 0.65;

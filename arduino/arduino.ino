@@ -1,5 +1,6 @@
 #define FASTLED_ALLOW_INTERRUPTS 0
 
+#include <ESP8266WiFi.h>
 #include "FastLED.h"
 
 // Configure this!
@@ -23,10 +24,11 @@ int read = 0;
 
 void setup() {
   delay(1000); // initial delay of a few seconds is recommended
+  WiFi.mode(WIFI_OFF);
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(curLeds, NUM_LEDS); //.setCorrection(TypicalLEDStrip); // initializes LED strip
   FastLED.setBrightness(BRIGHTNESS); // global brightness
   Serial.setTimeout(20);
-  Serial.begin(921600);
+  Serial.begin(460800);
 }
 
 int timeout = 0;

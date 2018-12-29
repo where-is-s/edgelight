@@ -23,9 +23,8 @@ public class SerialLedConnector extends Thread implements LedConnector {
 
 	private static final int START_MAGIC_BYTE = 27;
 	private static final int END_MAGIC_BYTE = 91;
-	private static final int UPDATES_INTERVAL = 7; // 9ms for 115200, 5ms for 921600 baud rate
-	private static final int BAUD_RATE = 921600;
-	private static final int BLOCK_SIZE = 112;
+	private static final int UPDATES_INTERVAL = 11; // ms, !!! adjust this when you change BAUD_RATE !!!
+	private static final int BAUD_RATE = 460800;
 	
 	private SerialPort serialPort;
 
@@ -62,29 +61,23 @@ public class SerialLedConnector extends Thread implements LedConnector {
 							smoothRgbs.get(i).smoothenTo(this.rgbs.get(i), 0.18);
 						}
 					}
-					for (int i = 0; i < Configuration.LEDS_COUNT;) {
-						long start = System.currentTimeMillis();
-						ByteArrayOutputStream baos = new ByteArrayOutputStream();
-						baos.write(START_MAGIC_BYTE);
-						baos.write(i);
-						DataOutputStream dos = new DataOutputStream(baos);
-						for (int j = 0; j < BLOCK_SIZE; ++j, ++i) {
-							write(this.smoothRgbs.get(i), dos);
-						}
-						dos.close();
-						baos.write(END_MAGIC_BYTE);
-						if (!serialPort.writeBytes(baos.toByteArray())) {
-							serialPort = null;
-							try {
-								Thread.sleep(1000);
-							} catch (InterruptedException e1) {
-							}
-							continue;
-						}
-						long timePassed = System.currentTimeMillis() - start;
-						if (timePassed < UPDATES_INTERVAL) {
-							Thread.sleep(UPDATES_INTERVAL - timePassed);
-						}
+					long start = System.currentTimeMillis();
+					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					baos.write(START_MAGIC_BYTE);
+					baos.write(0);
+					DataOutputStream dos = new DataOutputStream(baos);
+					for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
+						write(this.smoothRgbs.get(i), dos);
+					}
+					dos.close();
+					baos.write(END_MAGIC_BYTE);
+					if (!serialPort.writeBytes(baos.toByteArray())) {
+						serialPort = null;
+						continue;
+					}
+					long timePassed = System.currentTimeMillis() - start;
+					if (timePassed < UPDATES_INTERVAL) {
+						Thread.sleep(UPDATES_INTERVAL - timePassed);
 					}
 				} catch (SerialPortException e) {
 					// ignored
