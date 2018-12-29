@@ -32,7 +32,7 @@ public class LedManager {
 //	private static Logger logger = LoggerFactory.getLogger(LedManager.class);
 
 	public static enum MODE {
-		DYNAMIC, STATIC, OFF
+		DYNAMIC, STATIC, CHRISTMAS, OFF
 	}
 
 	private Robot robot;
@@ -120,6 +120,19 @@ public class LedManager {
 //		logger.debug((System.currentTimeMillis() - start) + " ms");
 		return image;
 	}
+	
+	// monitor brightness = MONITOR_LOW_BRIGHTNESS gives led brightness = 0
+	// monitor brightness = MONITOR_HIGH_BRIGHTNESS and higher doesn't change led brightness
+	// linear proportion between
+	private double getBrightnessCorrection() {
+		if (brightness <= MONITOR_LOW_BRIGHTNESS) {
+			return 0;
+		} else if (brightness >= MONITOR_HIGH_BRIGHTNESS) {
+			return 1;
+		} else {
+			return (brightness - MONITOR_LOW_BRIGHTNESS) / MONITOR_HIGH_BRIGHTNESS;
+		}
+	}
 
 	private List<RGB> postProcessLeds(List<RGB> leds) {
 		float hsb[] = new float[3];
@@ -143,17 +156,7 @@ public class LedManager {
 				curb *= BRIGHTNESS_CORRECTION_RIGHT;
 			}
 			
-			// monitor brightness = MONITOR_LOW_BRIGHTNESS gives led brightness = 0
-			// monitor brightness = MONITOR_HIGH_BRIGHTNESS and higher don't change led
-			// brightness
-			// linear proportion between
-			if (brightness <= MONITOR_LOW_BRIGHTNESS) {
-				curb = 0;
-			} else if (brightness >= MONITOR_HIGH_BRIGHTNESS) {
-//				curb *= 1;
-			} else {
-				curb *= (brightness - MONITOR_LOW_BRIGHTNESS) / MONITOR_HIGH_BRIGHTNESS;
-			}
+			curb *= getBrightnessCorrection();
 			
 			hsb[2] = Math.min(curb, 1.0f);
 			
@@ -170,6 +173,38 @@ public class LedManager {
 			led.checkBounds();
 		}
 		return leds;
+	}
+	
+	private void generateChristmas() {
+		int fullCycle = 50000; // ms
+		int fullStep = (int) (System.currentTimeMillis() % fullCycle);
+		int currentCycle = fullStep / 25000;
+		int currentStep = fullStep % 12500;
+		
+		float percentage = currentStep / 12500f;
+		float sin = (float) Math.sin(4 * Math.PI * percentage);
+		
+		float hsb[] = new float[3];
+		for (int i = 0; i < targetLeds.size(); ++i) {
+			RGB led = targetLeds.get(i);
+			
+			if (currentCycle == 0) {
+				hsb[0] = (float) ((Math.floor((1 + sin / 3 + 2 * i / (double) targetLeds.size()) * 255) % 255) / 255f);
+			} else {
+				hsb[0] = (float) ((Math.floor((1 + percentage) * 255) % 255) / 255f);
+			}
+			hsb[1] = 1;
+			hsb[2] = (float) getBrightnessCorrection();
+			Color c = new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
+			led.r = c.getRed();
+			led.g = c.getGreen();
+			led.b = c.getBlue();
+			
+			if (currentCycle == 1) {
+				led.r *= 0.7;
+				led.g *= 0.6;
+			}
+		}
 	}
 
 	private void run() {
@@ -195,11 +230,14 @@ public class LedManager {
 						targetLeds.set(i, new RGB(0, 0, 0));
 					}
 					break;
+				case CHRISTMAS:
+					generateChristmas();
+					break;
 				default:
 					break;
 				}
 
-				int sleepTime = 0;
+				int sleepTime = 5000;
 				while (sleepTime < 5000) {
 					synchronized (targetLeds) {
 						targetLeds.wait(15);
@@ -259,8 +297,12 @@ public class LedManager {
 			setMode(MODE.STATIC);
 			break;
 		case STATIC:
+			setMode(MODE.CHRISTMAS);
+			break;
+		case CHRISTMAS:
 			setMode(MODE.OFF);
 			break;
+		case OFF:
 		default:
 			setMode(MODE.DYNAMIC);
 		}
