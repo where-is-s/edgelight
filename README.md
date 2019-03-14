@@ -22,12 +22,11 @@ It would be good to improve screenshot rate but I didn't find a way to do that. 
 ## What do I need to do the same?
 
 In order to set up Edgelight, you'll need:
-1) Arduino-compatible board connected to USB in serial mode. I used Arduino Nano-compatible Chinese board with CH340/ATmega328P.
-It is very limited in resources but still enough to drive LED strip with a good quality.
-For my setup I bought this one: https://www.aliexpress.com/item/Nano-CH340-ATmega328P-MicroUSB-Compatible-for-Arduino-Nano-V3/32572612009.html
+1) Arduino-compatible board connected to USB in serial mode. I used Arduino Nano-compatible Chinese board with CH340/ATmega328P and then switched to ESP8266. You can still go with ATmega328P but it will require some tinkering with the code in order to optimize few things.
+For my setup I bought this one: https://ru.aliexpress.com/item/D1-mini-Mini-NodeMcu-4M-bytes-Lua-WIFI-Internet-of-Things-development-board-based-ESP8266-by/32662942091.html?spm=a2g0s.9042311.0.0.50af33eda0EGJ1
 
 2) LED-strip consisting of WS2812B or similar LEDs connected to Arduino board.
-Strip I used: https://www.aliexpress.com/item/DC5V-1m-4m-5m-WS2812B-Smart-led-pixel-strip-Black-White-PCB-30-60-144-leds/32337440906.html. I bought 4m 60 IP65 and used only 2 meters of it, you can just buy 2 meters and solder them together. You can choose 30 LEDs/m strip and it will work fine as well, only the max brightness will be lower.
+Strip I used: https://www.aliexpress.com/item/DC5V-1m-4m-5m-WS2812B-Smart-led-pixel-strip-Black-White-PCB-30-60-144-leds/32337440906.html. I bought 4m 60 IP65 and used only 2 meters of it, you can just buy 2 meters and solder them together. You can choose 30 LEDs/m strip and it will work fine as well, only the max brightness will be lower. IP65 is not required of course, IP30 will be just fine.
 
 3) LED-strip should better be powered by a separate PSU adapter. It is not completely necessary but it's strongly recommended if you want to drive more than 10-20 LEDs with good brightness. Just for testing you can set very low brightness and skip on the PSU. In general 14 W/meter is recommended for a 60 LEDs/m strip. It makes 28 W of recommended power for my setup.
 PSU I used: https://www.aliexpress.com/item/LED-power-supply-adapter-AC100-240V-to-DC-5V-12V-24V-to-1A-2A-3A-4A/32842360990.html (5V 6A version)
@@ -68,4 +67,4 @@ Features:
 * Code is mostly cross-platform. Windows works really well, utilizing only 15-20% of a single CPU core (Core i7 4750HQ). It is pretty resource-consuming on Mac OS, taking up to a full core on the same CPU.
 * There is NetworkLedController which allows to connect to LED strip using UDP. This is a solution for case if you want to go wireless and use a controller or micro PC board with integrated Wi-Fi. However remember that it will work only when you're in the same network, also signal will need to be strong. This was the first solution I implemented, but I was not happy with the result so I switched to serial connection which works WAY better.
 * If your display connection supports DDC/CI, the Java code will pick it up and allow simultaneous brightness change for LED strip and the monitor using Meta+F3 / Meta+F4 hotkeys.
-* Meta+F2 hotkey changes modes between Dynamic / Static / Off. Dynamic is a standard mode which uses screen content to determine LED brightness and color, Static just lights LEDs with a fixed brightness and color, Off turns LEDs off.
+* Meta+F2 hotkey changes modes between Dynamic / Static / Christmas celebration / Off. Dynamic is a standard mode which uses screen content to determine LED brightness and color, Static just lights LEDs with a fixed brightness and color, Off turns LEDs off. Christmas celebration starts a loop of changing and moving colors. Very pleasant and soothing for your best Christmas experience.
