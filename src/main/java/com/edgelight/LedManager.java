@@ -218,6 +218,8 @@ public class LedManager {
 
 			while (!Thread.interrupted()) {
 
+				int sleepTime = 5000;
+
 				switch (mode) {
 				case STATIC:
 					for (int i = 0; i < targetLeds.size(); ++i) {
@@ -232,20 +234,20 @@ public class LedManager {
 					break;
 				case CHRISTMAS:
 					generateChristmas();
+					sleepTime = 10;
 					break;
 				default:
 					break;
 				}
 
-				int sleepTime = 5000;
-				while (sleepTime < 5000) {
+				while (sleepTime > 0) {
 					synchronized (targetLeds) {
-						targetLeds.wait(15);
+						targetLeds.wait(Math.min(sleepTime,  15));
 						if (!targetLeds.equals(curLeds)) {
 							break;
 						}
 					}
-					sleepTime += 15;
+					sleepTime -= 15;
 				}
 
 				for (int i = 0; i < curLeds.size(); ++i) {
