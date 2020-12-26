@@ -40,7 +40,7 @@ public class LedManager {
 	private List<RGB> targetLeds = new ArrayList<>();
 	private List<RGB> curLeds = new ArrayList<>();
 	private MODE mode = MODE.DYNAMIC;
-	private int brightness;
+	private volatile int brightness;
 
 	private class ScreenCapturer extends Thread {
 		private int updateTargetLeds(int offset, List<RGB> rgbs) {
@@ -53,6 +53,7 @@ public class LedManager {
 			return offset;
 		}
 
+		@Override
 		public void run() {
 			while (!isInterrupted()) {
 				Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -120,7 +121,7 @@ public class LedManager {
 //		logger.debug((System.currentTimeMillis() - start) + " ms");
 		return image;
 	}
-	
+
 	// monitor brightness = MONITOR_LOW_BRIGHTNESS gives led brightness = 0
 	// monitor brightness = MONITOR_HIGH_BRIGHTNESS and higher doesn't change led brightness
 	// linear proportion between
@@ -155,11 +156,11 @@ public class LedManager {
 			} else {
 				curb *= BRIGHTNESS_CORRECTION_RIGHT;
 			}
-			
+
 			curb *= getBrightnessCorrection();
-			
+
 			hsb[2] = Math.min(curb, 1.0f);
-			
+
 			Color c = new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
 			led.r = c.getRed();
 			led.g = c.getGreen();
@@ -174,20 +175,20 @@ public class LedManager {
 		}
 		return leds;
 	}
-	
+
 	private void generateChristmas() {
 		int fullCycle = 50000; // ms
 		int fullStep = (int) (System.currentTimeMillis() % fullCycle);
 		int currentCycle = fullStep / 25000;
 		int currentStep = fullStep % 12500;
-		
+
 		float percentage = currentStep / 12500f;
 		float sin = (float) Math.sin(4 * Math.PI * percentage);
-		
+
 		float hsb[] = new float[3];
 		for (int i = 0; i < targetLeds.size(); ++i) {
 			RGB led = targetLeds.get(i);
-			
+
 			if (currentCycle == 0) {
 				hsb[0] = (float) ((Math.floor((1 + sin / 3 + 2 * i / (double) targetLeds.size()) * 255) % 255) / 255f);
 			} else {
@@ -199,7 +200,7 @@ public class LedManager {
 			led.r = c.getRed();
 			led.g = c.getGreen();
 			led.b = c.getBlue();
-			
+
 			if (currentCycle == 1) {
 				led.r *= 0.7;
 				led.g *= 0.6;

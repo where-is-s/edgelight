@@ -9,7 +9,6 @@ import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +22,24 @@ import com.tulskiy.keymaster.common.Provider;
 import de.pitkley.jmccs.monitor.Monitor;
 import de.pitkley.jmccs.monitor.MonitorHelper;
 import de.pitkley.jmccs.monitor.MonitorManager;
+import de.pitkley.jmccs.osx.OSXMonitorManager;
 import de.pitkley.jmccs.win.WindowsMonitorManager;
 
 public class App {
-	
+
 	private static Logger logger = LoggerFactory.getLogger(App.class);
 
 	private LedManager ledManager;
 	private MonitorHelper monitor;
 	private int luminance = 30;
+
+	private void setLuminanceSafe(int luminance) {
+		synchronized(this) {
+			if (monitor != null) {
+				monitor.setLuminance(luminance);
+			}
+		}
+	}
 
 	public void run() throws Exception {
 		TrayIcon trayIcon;
@@ -54,9 +62,9 @@ public class App {
 				System.exit(0);
 			}
 		});
-//	    java.awt.Font defaultFont = java.awt.Font.decode(null); // default font 
+//	    java.awt.Font defaultFont = java.awt.Font.decode(null); // default font
 //	    float adjustmentRatio = 1.5f; //  Calculate this based on your metrics
-//	    float newFontSize = defaultFont.getSize() * adjustmentRatio ; 
+//	    float newFontSize = defaultFont.getSize() * adjustmentRatio ;
 //	    java.awt.Font derivedFont = defaultFont.deriveFont(newFontSize);
 //	    defaultItem.setFont(derivedFont);
 		popup.add(defaultItem);
@@ -67,41 +75,37 @@ public class App {
 
 		tray.add(trayIcon);
 
+		ledManager = new LedManager(new SerialLedConnector());
+		ledManager.setMode(MODE.CHRISTMAS);
+		ledManager.setBrightness(luminance);
+		ledManager.start();
+
 		MonitorManager monitorManager;
 		if (System.getProperty("os.name").toLowerCase().contains("win")) {
 			monitorManager = new WindowsMonitorManager();
 		} else {
-			monitorManager = new WindowsMonitorManager();
-		}
-		List<Monitor> monitors = monitorManager.getMonitors();
-
-		for (Monitor mon : monitors) {
-			if (mon.isMainMonitor()) {
-				monitor = new MonitorHelper(mon);
-				break;
-			}
+			monitorManager = new OSXMonitorManager();
 		}
 
-		if (monitor != null) {
-			luminance = monitor.getLuminance().getCurrent();
-		} else {
-			logger.warn("No monitor found. Make sure it's connected through HDMI.");
+		Monitor mon = monitorManager.getMainMonitor().get();
+		while (mon == null) {
+			logger.warn("No monitor found. Make sure it's connected through HDMI. Waiting...");
+			Thread.sleep(3000);
+			mon = monitorManager.getMainMonitor().get();
 		}
 
-		ledManager = new LedManager(new SerialLedConnector());
+		monitor = new MonitorHelper(mon);
+		luminance = monitor.getLuminance().getCurrent();
 		ledManager.setMode(MODE.DYNAMIC);
 		ledManager.setBrightness(luminance);
-		ledManager.start();
-		
+
 		Provider provider = Provider.getCurrentProvider(true);
 		provider.register(Configuration.HOTKEY_BRIGHTNESS_UP, new HotKeyListener() {
 			@Override
 			public void onHotKey(HotKey hotKey) {
 				luminance = Math.min(100, luminance + Configuration.LUMINANCE_STEP);
 				ledManager.setBrightness(luminance);
-				if (monitor != null) {
-					monitor.setLuminance(luminance);
-				}
+				setLuminanceSafe(luminance);
 			}
 		});
 		provider.register(Configuration.HOTKEY_BRIGHTNESS_DOWN, new HotKeyListener() {
@@ -109,9 +113,7 @@ public class App {
 			public void onHotKey(HotKey hotKey) {
 				luminance = Math.max(0, luminance - Configuration.LUMINANCE_STEP);
 				ledManager.setBrightness(luminance);
-				if (monitor != null) {
-					monitor.setLuminance(luminance);
-				}
+				setLuminanceSafe(luminance);
 			}
 		});
 		provider.register(Configuration.HOTKEY_CHANGE_MODE, new HotKeyListener() {
@@ -120,6 +122,27 @@ public class App {
 				ledManager.toggleMode();
 			}
 		});
+
+		do {
+			boolean monitorIsOff = monitor == null || (monitor.getLuminance().getCurrent() == 0 && luminance != 0);
+			if (monitorIsOff) {
+				logger.info("Monitor is off, searching for new one...");
+				synchronized(this) {
+					try {
+						mon = monitorManager.getMainMonitor().orElse(null);
+						monitor = mon == null ? null : new MonitorHelper(mon);
+					} catch (Exception e) {
+						monitor = null;
+					}
+				}
+				logger.info(monitor == null ? "Not found." : "Found!");
+				if (monitor != null) {
+					luminance = monitor.getLuminance().getCurrent();
+					ledManager.setBrightness(luminance);
+				}
+			}
+			Thread.sleep(3000);
+		} while (true);
 	}
 
 }

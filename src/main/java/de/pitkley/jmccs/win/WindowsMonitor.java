@@ -123,7 +123,7 @@ public class WindowsMonitor implements Monitor {
     @Override
     public void close() throws IOException {
         if (closed) {
-            throw new IllegalStateException("Monitor is already closed");
+            return;
         }
 
         DXVA2.DestroyPhysicalMonitor(physical_monitor.hPhysicalMonitor);
