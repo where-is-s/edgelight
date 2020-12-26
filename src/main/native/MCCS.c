@@ -26,14 +26,14 @@ UInt8 checksum(int count, ...) {
     int i;
     va_list al;
     va_start(al, count);
-    
+
     UInt8 result = 0x00;
-    
+
     for (i = 1; i <= count; i++) {
         UInt8 val = va_arg(al, int);
         result ^= val;
     }
-    
+
     return result;
 }
 
@@ -147,19 +147,19 @@ int MCCSGetCapabilityString(CGDirectDisplayID displayID, char** ppCapabilityStri
     size_t capstring_size = 256;
     unsigned int len = 0, offset = 0;
     *ppCapabilityString = (char*) malloc(capstring_size * sizeof(char));
-    
+
     do {
         struct MCCSCapabilitiesReply capReply = {};
         len = MCCSGetCapabilitiesByOffset(displayID, offset, &capReply);
         if (len < MCCS_CAPABILITIES_REQUEST_OVERHEAD) {
             return 1;
         }
-        
+
         unsigned int data_length = (len - MCCS_CAPABILITIES_REQUEST_OVERHEAD);
         if (data_length <= 0) {
             break; // End of string
         }
-        
+
         if ((offset + data_length) >= /* greater-equal to account for null-termination */ capstring_size) {
             capstring_size += 256;
             char* capstring_realloc = realloc(*ppCapabilityString, capstring_size);
@@ -169,11 +169,11 @@ int MCCSGetCapabilityString(CGDirectDisplayID displayID, char** ppCapabilityStri
                 return 1;
             }
         }
-        
+
         memcpy((*ppCapabilityString + offset), capReply.data, data_length);
         offset += data_length;
     } while (len > MCCS_CAPABILITIES_REQUEST_OVERHEAD);
-    
+
     return 0;
 }
 
@@ -184,12 +184,12 @@ int MCCSGetCapabilitiesByOffset(CGDirectDisplayID displayID, UInt16 offset, stru
     IOI2CRequest request = {};
     struct MCCSCapabilitiesRequest capRequest = MCCS_CAPABILITIES_REQUEST_DEFAULT;
     capRequest.offset = offset;
-    
+
     request.commFlags = kIOI2CUseSubAddressCommFlag;
     request.sendAddress = capRequest.destination_address;
     request.sendSubAddress = capRequest.source_address;
     request.sendTransactionType = kIOI2CSimpleTransactionType;
-    
+
     UInt8 data[5] = {
         capRequest.length,
         capRequest.capabilities_request_command,
@@ -199,35 +199,35 @@ int MCCSGetCapabilitiesByOffset(CGDirectDisplayID displayID, UInt16 offset, stru
     data[4] = checksum(6, capRequest.destination_address, capRequest.source_address, capRequest.length, capRequest.capabilities_request_command, (capRequest.offset >> 8), (capRequest.offset & 255));
     request.sendBuffer = (vm_address_t) data;
     request.sendBytes = sizeof(data);
-    
+
     request.replyAddress = 0x6F;
     request.replySubAddress = request.sendSubAddress;
     request.replyTransactionType = kIOI2CDDCciReplyTransactionType;
     unsigned char _buf[sizeof(struct MCCSCapabilitiesReply)];
     request.replyBuffer = (vm_address_t) _buf;
     request.replyBytes = sizeof(_buf);
-    
+
     request.minReplyDelay = kDelayBase;
-    
+
     bool result = false;
     result = DisplayRequest(displayID, &request);
-    
+
     if (!result || !reply) {
         return 0;
     }
-    
+
     memcpy(reply, &_buf, sizeof(struct MCCSCapabilitiesReply));
-    
+
     result = (result
               && reply->destination_address == capRequest.destination_address
               && (reply->length & 0x80) != 0
               && reply->capabilities_reply_opcode == 0xE3
               && reply->offset_high == (capRequest.offset >> 8)
               && reply->offset_low == (capRequest.offset & 255));
-    
+
     if (!result) {
         return 0;
     }
-    
+
     return (reply->length & ~MCCS_LENGTH_MAGIC);
 }

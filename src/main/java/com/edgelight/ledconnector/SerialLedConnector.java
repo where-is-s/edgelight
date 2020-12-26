@@ -19,114 +19,114 @@ import jssc.SerialPortList;
 
 public class SerialLedConnector extends Thread implements LedConnector {
 
-	private static Logger logger = LoggerFactory.getLogger(SerialLedConnector.class);
+    private static Logger logger = LoggerFactory.getLogger(SerialLedConnector.class);
 
-	private static final int START_MAGIC_BYTE = 27;
-	private static final int END_MAGIC_BYTE = 91;
-	private static final int UPDATES_INTERVAL = 11; // ms, !!! adjust this when you change BAUD_RATE !!!
-	private static final int BAUD_RATE = 460800;
-	
-	private SerialPort serialPort;
+    private static final int START_MAGIC_BYTE = 27;
+    private static final int END_MAGIC_BYTE = 91;
+    private static final int UPDATES_INTERVAL = 11; // ms, !!! adjust this when you change BAUD_RATE !!!
+    private static final int BAUD_RATE = 460800;
 
-	private final List<RGB> rgbs = new ArrayList<>();
-	private final List<RGB> smoothRgbs = new ArrayList<>();
+    private SerialPort serialPort;
 
-	public SerialLedConnector() {
-		for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
-			this.rgbs.add(new RGB(0, 0, 0));
-			this.smoothRgbs.add(new RGB(0, 0, 0));
-		}
-		
-		start();
-	}
-	
-	private void write(RGB rgb, DataOutputStream os) throws IOException {
-		os.writeByte((int) rgb.r);
-		os.writeByte((int) rgb.g);
-		os.writeByte((int) rgb.b);
-	}
-	
-	@Override
-	public void run() {
-		try {
-			while (true) {
-				while (serialPort == null) {
-					Thread.sleep(1000);
-					connect();
-				}
-				
-				try {
-					synchronized (this.rgbs) {
-						for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
-							smoothRgbs.get(i).smoothenTo(this.rgbs.get(i), 0.18);
-						}
-					}
-					long start = System.currentTimeMillis();
-					ByteArrayOutputStream baos = new ByteArrayOutputStream();
-					baos.write(START_MAGIC_BYTE);
-					baos.write(0);
-					DataOutputStream dos = new DataOutputStream(baos);
-					for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
-						write(this.smoothRgbs.get(i), dos);
-					}
-					dos.close();
-					baos.write(END_MAGIC_BYTE);
-					if (!serialPort.writeBytes(baos.toByteArray())) {
-						serialPort = null;
-						continue;
-					}
-					long timePassed = System.currentTimeMillis() - start;
-					if (timePassed < UPDATES_INTERVAL) {
-						Thread.sleep(UPDATES_INTERVAL - timePassed);
-					}
-				} catch (SerialPortException e) {
-					// ignored
-				} catch (IOException e) {
-					// ignored
-				}
-			}
-		} catch (InterruptedException e) {
-		}
-	}
-	
-	private void connect() {
-		String[] portNames = SerialPortList.getPortNames();
-		
-		if (portNames.length == 0) {
-			logger.info("No COM-ports available! Waiting...");
-			return;
-		}
-		
-		String port = Configuration.PREFERRED_PORT;
-		if (port == null) {
-			port = portNames[0];
-		}
-		
-		if (!Lists.newArrayList(portNames).contains(port)) {
-			logger.info("Port " + port + " is not available! Waiting...");
-			return;
-		}
-		
-		try {
-			serialPort = new SerialPort(port);
-			serialPort.openPort();
-			serialPort.setParams(BAUD_RATE,
-	                SerialPort.DATABITS_8,
-	                SerialPort.STOPBITS_1,
-	                SerialPort.PARITY_NONE);
-			logger.info("Initialized port: " + port);
-		} catch (SerialPortException e) {
-			e.printStackTrace();
-			serialPort = null;
-		}
-	}
-	
-	@Override
-	public void submit(List<RGB> rgbs) {
-		synchronized (this.rgbs) {
-			this.rgbs.clear();
-			this.rgbs.addAll(rgbs);
-		}
-	}
-	
+    private final List<RGB> rgbs = new ArrayList<>();
+    private final List<RGB> smoothRgbs = new ArrayList<>();
+
+    public SerialLedConnector() {
+        for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
+            this.rgbs.add(new RGB(0, 0, 0));
+            this.smoothRgbs.add(new RGB(0, 0, 0));
+        }
+
+        start();
+    }
+
+    private void write(RGB rgb, DataOutputStream os) throws IOException {
+        os.writeByte((int) rgb.r);
+        os.writeByte((int) rgb.g);
+        os.writeByte((int) rgb.b);
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (true) {
+                while (serialPort == null) {
+                    Thread.sleep(1000);
+                    connect();
+                }
+
+                try {
+                    synchronized (this.rgbs) {
+                        for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
+                            smoothRgbs.get(i).smoothenTo(this.rgbs.get(i), 0.18);
+                        }
+                    }
+                    long start = System.currentTimeMillis();
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    baos.write(START_MAGIC_BYTE);
+                    baos.write(0);
+                    DataOutputStream dos = new DataOutputStream(baos);
+                    for (int i = 0; i < Configuration.LEDS_COUNT; ++i) {
+                        write(this.smoothRgbs.get(i), dos);
+                    }
+                    dos.close();
+                    baos.write(END_MAGIC_BYTE);
+                    if (!serialPort.writeBytes(baos.toByteArray())) {
+                        serialPort = null;
+                        continue;
+                    }
+                    long timePassed = System.currentTimeMillis() - start;
+                    if (timePassed < UPDATES_INTERVAL) {
+                        Thread.sleep(UPDATES_INTERVAL - timePassed);
+                    }
+                } catch (SerialPortException e) {
+                    // ignored
+                } catch (IOException e) {
+                    // ignored
+                }
+            }
+        } catch (InterruptedException e) {
+        }
+    }
+
+    private void connect() {
+        String[] portNames = SerialPortList.getPortNames();
+
+        if (portNames.length == 0) {
+            logger.info("No COM-ports available! Waiting...");
+            return;
+        }
+
+        String port = Configuration.PREFERRED_PORT;
+        if (port == null) {
+            port = portNames[0];
+        }
+
+        if (!Lists.newArrayList(portNames).contains(port)) {
+            logger.info("Port " + port + " is not available! Waiting...");
+            return;
+        }
+
+        try {
+            serialPort = new SerialPort(port);
+            serialPort.openPort();
+            serialPort.setParams(BAUD_RATE,
+                    SerialPort.DATABITS_8,
+                    SerialPort.STOPBITS_1,
+                    SerialPort.PARITY_NONE);
+            logger.info("Initialized port: " + port);
+        } catch (SerialPortException e) {
+            e.printStackTrace();
+            serialPort = null;
+        }
+    }
+
+    @Override
+    public void submit(List<RGB> rgbs) {
+        synchronized (this.rgbs) {
+            this.rgbs.clear();
+            this.rgbs.addAll(rgbs);
+        }
+    }
+
 }
