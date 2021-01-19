@@ -33,14 +33,15 @@ dependencies {
 	implementation 'de.pitkley.jmccs:jmccs:0.2.0'
 	implementation 'com.github.tulskiy:jkeymaster:1.2'
 	implementation 'org.slf4j:slf4j-simple:1.7.25'
-	implementation 'org.scream3r:jssc:2.8.0'
-
-    // Use JUnit test framework
-    testImplementation 'junit:junit:4.12'
+	implementation 'de.ibapl.spsw:de.ibapl.spsw.jnhwprovider:2.1.0'
 }
 
 jar {
     manifest {
         attributes 'Main-Class': 'com.edgelight.Launcher'
+    }
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }

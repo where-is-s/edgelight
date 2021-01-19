@@ -91,7 +91,11 @@ public class App {
         while (mon == null) {
             logger.warn("No monitor found. Make sure it's connected through HDMI. Waiting...");
             Thread.sleep(3000);
-            mon = monitorManager.getMainMonitor().get();
+            try {
+                mon = monitorManager.getMainMonitor().get();
+            } catch (Exception e) {
+                mon = null;
+            }
         }
 
         monitor = new MonitorHelper(mon);
