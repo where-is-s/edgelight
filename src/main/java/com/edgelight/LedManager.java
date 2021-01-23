@@ -24,12 +24,15 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.edgelight.common.RGB;
 import com.edgelight.ledconnector.LedConnector;
 
 public class LedManager {
 
-//    private static Logger logger = LoggerFactory.getLogger(LedManager.class);
+    private static Logger logger = LoggerFactory.getLogger(LedManager.class);
 
     public static enum MODE {
         DYNAMIC, STATIC, CHRISTMAS, OFF
@@ -43,6 +46,14 @@ public class LedManager {
     private volatile int brightness;
 
     private class ScreenCapturer extends Thread {
+        private Dimension screenSize = new Dimension();
+        private int leftOffset;
+        private int topOffset;
+        private int rightOffset;
+        private int bottomOffset;
+        private int captureWidth;
+        private float pixelsPerLed;
+
         private int updateTargetLeds(int offset, List<RGB> rgbs) {
             synchronized (targetLeds) {
                 for (int i = 0; i < rgbs.size(); ++i) {
@@ -53,20 +64,37 @@ public class LedManager {
             return offset;
         }
 
+        private void updateScreenSize() {
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            if (screenSize.equals(this.screenSize)) {
+                return;
+            } else {
+                this.screenSize = screenSize;
+                logger.info("Screen resolution updated: " + screenSize.width + "x" + screenSize.height);
+            }
+            leftOffset = (int) (0.02f * screenSize.width);
+            rightOffset = (int) (0.065f * screenSize.width);
+            topOffset = (int) (0.035f * screenSize.height);
+            bottomOffset = (int) (0.035f * screenSize.height);
+            captureWidth = 1;
+            int perimeter = screenSize.width * 2 + screenSize.height * 2;
+            pixelsPerLed = perimeter / (float) LEDS_COUNT;
+        }
+
         @Override
         public void run() {
+            long previousTime = 0;
             while (!isInterrupted()) {
-                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-                int captureOffset = 50;
-                int captureWidth = 1;
-                int perimeter = screenSize.width * 2 + screenSize.height * 2;
-                BufferedImage top = getCapture(new Rectangle(0, captureOffset, screenSize.width, captureWidth));
-                BufferedImage left = getCapture(new Rectangle(captureOffset, 0, captureWidth, screenSize.height));
+                if (System.currentTimeMillis() > previousTime + 10000) {
+                    updateScreenSize();
+                    previousTime = System.currentTimeMillis();
+                }
+                BufferedImage top = getCapture(new Rectangle(0, topOffset, screenSize.width, captureWidth));
+                BufferedImage left = getCapture(new Rectangle(leftOffset, 0, captureWidth, screenSize.height));
                 BufferedImage bottom = getCapture(
-                        new Rectangle(0, screenSize.height - captureOffset, screenSize.width, captureWidth));
+                        new Rectangle(0, screenSize.height - bottomOffset, screenSize.width, captureWidth));
                 BufferedImage right = getCapture(
-                        new Rectangle(screenSize.width - captureOffset - 120, 0, captureWidth, screenSize.height));
-                float pixelsPerLed = perimeter / (float) LEDS_COUNT;
+                        new Rectangle(screenSize.width - rightOffset, 0, captureWidth, screenSize.height));
 
                 int offset = updateTargetLeds(0, postProcessLeds(convertToLed(top, (int) pixelsPerLed, true)));
                 offset = updateTargetLeds(offset, postProcessLeds(convertToLed(left, (int) pixelsPerLed, false)));
